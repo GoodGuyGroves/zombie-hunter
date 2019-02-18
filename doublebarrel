@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+#
+# Creator: Russell Groves - rgroves@arago.de
+# GitHub: https://github.com/GoodGuyGroves
+# Date: 15/02/19
+# Version: 0.1
+#
+# Description: Takes the output from the 'zombiehunter' script and gives each zombie two to the head.
+# Usage: ./zombiehunter | ./doublebarrel
+
+main() {
+    stdout_input=$(</dev/stdin)
+    declare -a one_liners=("Eliminated" "Splattered" "Annihilated" "Destroyed" "Ended")
+    declare -a zombie_parents
+    echo "${stdout_input}" | grep "parents" 2>&1 > /dev/null
+    if [[ $? -eq 0 ]]; then
+        while read x; do
+            zombie_parents+=("${x}")
+        done < <(echo "${stdout_input}" | awk '/parents/{y=1;next}y' | awk '{print $1}')
+    else
+        printf "Error: I only take action from my zombiehunter.\n"
+        exit 1
+    fi
+    if [[ -z "${zombie_parents}" ]]; then
+        printf "No zombies to kill today.\n"
+        exit 0
+    fi
+    printf "Zombie parents about to get double-tapped:\n"
+    printf "%s\n" "${zombie_parents[@]}"
+    declare -a tough_zombies
+    for x in "${zombie_parents[@]}"; do
+        kill -0 "${x}" 2>&1 > /dev/null
+        if [[ $? -eq 0 ]]; then
+            selexp=${one_liners[$RANDOM % ${#one_liners[@]}]}
+            kill "${x}"
+            sleep 5
+            kill -0 "${x}" 2> /dev/null
+            if [[ $? -eq 0 ]]; then
+                printf "${x} is difficult to kill!\n"
+                tough_zombies+=("${x}")
+            else
+                printf "${selexp} ${x}\n"
+            fi
+        else
+            printf "Seems the zombie died on its own accord. Not enough brains.\n"
+        fi
+    done
+    if [[ -z "${tough_zombies}" ]]; then
+        printf "All zombies eliminated.\n"
+    else
+        printf "Some zombies got away. Try hunting them again.\n"
+    fi
+}
+
+main "${@}"

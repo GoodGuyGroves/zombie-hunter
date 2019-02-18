@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+#
+# Creator: Russell Groves - rgroves@arago.de
+# GitHub: https://github.com/GoodGuyGroves
+# Date: 15/02/19
+# Version: 0.1
+#
+# Description: Find's all zombie processes and their parents.
+
+get_zombies() {
+    while read x; do
+        zombies+=("${x}")
+    done < <(ps aux | grep ' Z' | grep -v grep | awk '{print $2}')
+}
+
+get_zombie_parents() {
+    for x in "${zombies[@]}"; do
+        zombie_parents+=($(ps -o ppid= -p "${x}"))
+    done
+}
+
+main () {
+    declare -a zombies
+    get_zombies
+    declare -a zombie_parents
+    get_zombie_parents
+    declare -a parents_no_dupes
+    parents_no_dupes=($(for x in "${zombie_parents[@]}"; do if [[ "${x}" -gt 0 ]]; then echo "${x}"; fi; done | sort -du | sort -n))
+    printf "Zombie processes:\n"
+    for x in "${zombies[@]}"; do
+        printf "${x}\t"
+        temp_var=$(ps -p ${x} -o comm=)
+        printf "${temp_var}\n"
+    done
+    printf "\n"
+    printf "Zombie parents:\n"
+    for x in "${parents_no_dupes[@]}"; do
+        printf "${x}\t"
+        temp_var=$(ps -p ${x} -o comm=)
+        printf "${temp_var}\n"
+    done
+}
+
+main "${@}"
